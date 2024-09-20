@@ -1002,7 +1002,12 @@ export class WhatsAppService implements OnModuleInit, OnModuleDestroy {
                     case 'stickerMessage':
                     case 'documentMessage':
                     case 'documentWithCaptionMessage':
+                    case 'senderKeyDistributionMessage':
                         try {
+                            if (messageType === "senderKeyDistributionMessage" && !m.message.imageMessage) {
+                                return;
+                            }
+
                             buffer = await downloadMediaMessage(
                                 m,
                                 'buffer',
