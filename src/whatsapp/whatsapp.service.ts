@@ -302,6 +302,9 @@ export class WhatsAppService implements OnModuleInit, OnModuleDestroy {
             if (statusCode === DisconnectReason.timedOut) {
                 this.eventEmitter.emit(`qr.${userId}`, "expired!");
                 console.log(`[WhatsApp] Reconnecting Stoped for user ${userId}...`);
+                // if ((lastDisconnect?.error as Boom).isBoom) {
+                //     await this.initializeConnection(userId);
+                // }
                 return;
             } else if ((lastDisconnect?.error as Boom)?.message.toLowerCase() === 'user requested!') {
                 console.log(`[WhatsApp] Reconnecting Stoped for user User Closed ${userId}...`);
@@ -837,12 +840,6 @@ export class WhatsAppService implements OnModuleInit, OnModuleDestroy {
     }
 
     private async schedulePfpFetching(userId: string): Promise<void> {
-        const socket = this.connections.get(userId);
-        if (!socket) {
-            console.log(`[WhatsApp] No active connection for user ${userId}`);
-            return;
-        }
-
         const userGroups = this.waUserGroups.get(userId) || {};
 
         for (const [groupId, group] of Object.entries(userGroups)) {
@@ -857,6 +854,15 @@ export class WhatsAppService implements OnModuleInit, OnModuleDestroy {
             await new Promise(resolve => setTimeout(resolve, delay));
 
             try {
+
+                const socket = this.connections.get(userId);
+                const conn = this.connectionStatuses.get(userId);
+
+                if ((socket && !conn.isConnected) || !socket) {
+                    console.log(`[WhatsApp] No active connection for user ${userId}`);
+                    return;
+                }
+
                 let pfpUrl;
                 if (group.isCommunity) {
                     group.imageUrl = "https://cdn.pixabay.com/photo/2021/07/02/04/48/user-6380868_640.png";
@@ -1004,8 +1010,9 @@ export class WhatsAppService implements OnModuleInit, OnModuleDestroy {
                     case 'documentWithCaptionMessage':
                     case 'senderKeyDistributionMessage':
                         try {
-                            if (messageType === "senderKeyDistributionMessage" && !m.message.imageMessage) {
-                                return;
+                            if (messageType === "senderKeyDistributionMessage" && m.message.imageMessage) {
+                                console.log('Hahhahahahah')
+
                             }
 
                             buffer = await downloadMediaMessage(
@@ -1075,6 +1082,7 @@ export class WhatsAppService implements OnModuleInit, OnModuleDestroy {
             }
 
             if (media) {
+                console.log(media)
                 await socket.sendMessage(toId, media);
                 console.log("Message sent successfully");
             } else {
